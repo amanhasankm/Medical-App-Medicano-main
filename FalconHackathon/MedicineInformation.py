@@ -1,14 +1,14 @@
 import streamlit as st
-import openai
+from ai71 import AI71
 from dotenv import load_dotenv
 import os
 
 class Information:
     def __init__(self):
-        # Load environment variables
+        # loading environment variables from .env file
         load_dotenv()
-        self.OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-        openai.api_key = self.OPENAI_API_KEY
+        self.AI71_API_KEY = os.getenv("AI71_API_KEY")
+        self.client = AI71(self.AI71_API_KEY)
 
     def app(self):
         # Custom CSS for styling FAQs
@@ -55,18 +55,20 @@ class Information:
                     f"Ensure that the information is well-organized, clear, and professional, and include relevant hyperlinks where appropriate, such as links to medical journals, articles, or other authoritative sources."
                 )
 
-                # Making OpenAI API call
-                response = openai.Completion.create(
-                    model="gpt-3.5-turbo",  # You can use "gpt-4" if you have access
+                response = self.client.chat.completions.create(
+                    model="tiiuae/falcon-180b-chat",
                     messages=[
                         {"role": "system", "content": "You are a medical assistant."},
                         {"role": "user", "content": prompt},
                     ],
-                    max_tokens=1500
+                    stream=True,
                 )
 
-                # Extract the response content
-                response_content = response.choices[0].message['content']
+                # Collect the streamed response content
+                response_content = ""
+                for chunk in response:
+                    if chunk.choices[0].delta.content:
+                        response_content += chunk.choices[0].delta.content
 
                 st.title(f"{medicine} Description")
                 st.markdown(response_content)
